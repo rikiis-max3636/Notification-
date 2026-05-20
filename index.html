@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Daily Motivation Anime App</title>
+    <!-- Google Fonts: Cursive Style -->
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&display=swap" rel="stylesheet">
+    <!-- Google Identity Services for Sign-in -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+    <style>
+        /* --- CARTOON/ANIME & CURSIVE STYLING --- */
+        :root {
+            --primary: #ff8fb3; /* Anime pastel pink */
+            --secondary: #a2d2ff; /* Pastel blue */
+            --text-dark: #333;
+            --bg-white: #ffffff;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Caveat', cursive; /* Cursive font requested */
+            background-color: var(--bg-white);
+            color: var(--text-dark);
+            font-size: 22px;
+            overflow-x: hidden;
+        }
+
+        /* Utility Classes */
+        .hidden { display: none !important; }
+        .cartoon-border {
+            border: 3px solid var(--text-dark);
+            border-radius: 16px;
+            box-shadow: 5px 5px 0px var(--primary);
+            background: white;
+        }
+
+        /* App Container Layout */
+        #app-container { height: 100vh; display: flex; flex-direction: column; }
+        
+        /* Header / Topbar */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            border-bottom: 3px solid var(--text-dark);
+            background: var(--bg-white);
+            z-index: 10;
+        }
+
+        .profile-icon {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            border: 2px solid var(--text-dark);
+            cursor: pointer;
+            object-fit: cover;
+            background: var(--secondary);
+        }
+
+        h1 { margin: 0; font-size: 28px; color: var(--primary); text-shadow: 1px 1px 0 #333; }
+
+        /* Pages */
+        .page { padding: 20px; flex-grow: 1; overflow-y: auto; }
+
+        /* Buttons */
+        button {
+            font-family: 'Caveat', cursive;
+            font-size: 24px;
+            font-weight: bold;
+            padding: 10px 20px;
+            cursor: pointer;
+            background: var(--primary);
+            color: white;
+            transition: transform 0.1s;
+        }
+        button:active { transform: translate(3px, 3px); box-shadow: 2px 2px 0px var(--text-dark); }
+        .btn-cartoon {
+            border: 3px solid var(--text-dark);
+            border-radius: 12px;
+            box-shadow: 5px 5px 0px var(--text-dark);
+        }
+
+        /* Specific Page Styles */
+        .center-screen {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .quote-card { padding: 20px; margin-bottom: 20px; font-size: 26px; }
+        
+        .plan-card {
+            padding: 15px;
+            margin-bottom: 15px;
+            background: #fff9fa;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* Inputs */
+        input, textarea {
+            font-family: 'Caveat', cursive;
+            font-size: 20px;
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            box-sizing: border-box;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 1. PERMISSION BLOCKER SCREEN -->
+    <div id="permission-screen" class="center-screen">
+        <h2 style="font-size: 40px; color: var(--primary);">Hold Up! 🛑</h2>
+        <p>This is a daily motivation app. We need notification permissions to send you your daily 4:00 AM boost!</p>
+        <button class="btn-cartoon" onclick="requestNotificationPermission()">Grant Permission</button>
+        <p id="permission-error" style="color: red; font-weight: bold;" class="hidden">
+            App closed. You must allow notifications in your browser settings to use this app.
+        </p>
+    </div>
+
+    <!-- MAIN APP WRAPPER (Hidden until permission granted) -->
+    <div id="app-container" class="hidden">
+        
+        <header>
+            <h1>MotivAnime ✨</h1>
+            <img src="https://api.dicebear.com/7.x/notionists/svg?seed=Guest" id="header-profile-icon" class="profile-icon" onclick="navigate('profile-page')">
+        </header>
+
+        <!-- 2. MAIN PAGE -->
+        <div id="main-page" class="page">
+            <h2>Welcome back! 🌸</h2>
+            <div class="cartoon-border quote-card">
+                "You don't have to see the whole staircase, just take the first step."<br>
+                <small style="color: #666;">(आपको पूरी सीढ़ी देखने की ज़रूरत नहीं है, बस पहला कदम उठाएं।)</small>
+                <br><b>- Martin Luther King, Jr.</b>
+            </div>
+
+            <button class="btn-cartoon" style="width: 100%; background: var(--secondary); color: #333;" onclick="navigate('subscription-page')">Manage Notifications</button>
+            
+            <!-- Appears only after subscription -->
+            <div id="premium-features" class="hidden" style="margin-top: 30px;">
+                <h3 style="color: var(--primary);">Premium Active 🌟</h3>
+                <button class="btn-cartoon" style="width: 100%;" onclick="sendTestNotification()">Notify Now (Test)</button>
+            </div>
+        </div>
+
+        <!-- 3. PROFILE PAGE -->
+        <div id="profile-page" class="page hidden">
+            <button class="btn-cartoon" style="padding: 5px 10px; font-size: 18px;" onclick="navigate('main-page')">← Back</button>
+            
+            <div id="auth-section" style="text-align: center; margin-top: 30px;">
+                <h2>No profile created yet!</h2>
+                <!-- GOOGLE SIGN IN BUTTON PLACEHOLDER -->
+                <div id="g_id_onload"
+                     data-client_id="YOUR_GOOGLE_CLIENT_ID_HERE.apps.googleusercontent.com"
+                     data-callback="handleCredentialResponse">
+                </div>
+                <div class="g_id_signin" data-type="standard" data-size="large" data-theme="outline" data-text="sign_in_with" data-shape="rectangular" data-logo_alignment="left"></div>
+                <p>or</p>
+                <button class="btn-cartoon" onclick="mockLogin()">Mock Login (For Testing)</button>
+            </div>
+
+            <div id="user-details-section" class="hidden">
+                <center>
+                    <img id="profile-pic-display" class="profile-icon" style="width: 100px; height: 100px;">
+                </center>
+                <label>Username</label>
+                <input type="text" id="username-input" class="cartoon-border">
+                <label>Bio</label>
+                <textarea id="bio-input" class="cartoon-border" rows="3"></textarea>
+                
+                <button class="btn-cartoon" style="width: 100%; margin-bottom: 10px;" onclick="saveProfile()">Save Profile</button>
+                <button class="btn-cartoon" style="width: 100%; background: #ff4d4d;" onclick="logout()">Log Out</button>
+            </div>
+        </div>
+
+        <!-- 4. SUBSCRIPTION PAGE -->
+        <div id="subscription-page" class="page hidden">
+            <button class="btn-cartoon" style="padding: 5px 10px; font-size: 18px;" onclick="navigate('main-page')">← Back</button>
+            <h2>Choose a Plan 💳</h2>
+            <p>Get 4:00 AM daily quotes!</p>
+
+            <div class="cartoon-border plan-card">
+                <div><b>1 Week</b><br>₹1 INR</div>
+                <button class="btn-cartoon" onclick="payWithUPI(1)">Pay</button>
+            </div>
+            <div class="cartoon-border plan-card">
+                <div><b>1 Month</b><br>₹49 INR</div>
+                <button class="btn-cartoon" onclick="payWithUPI(49)">Pay</button>
+            </div>
+            <div class="cartoon-border plan-card">
+                <div><b>1 Year</b><br>₹499 INR</div>
+                <button class="btn-cartoon" onclick="payWithUPI(499)">Pay</button>
+            </div>
+        </div>
+
+        <!-- 5. NOTIFICATION READER PAGE -->
+        <div id="reader-page" class="page hidden center-screen">
+            <button class="btn-cartoon" style="position: absolute; top: 20px; left: 20px;" onclick="navigate('main-page')">Home</button>
+            <h2 style="color: var(--primary);">Today's Motivation</h2>
+            <div id="reader-content" class="cartoon-border quote-card"></div>
+        </div>
+
+    </div>
+
+    <!-- APP LOGIC -->
+    <script>
+        // --- STATE MANAGEMENT ---
+        let isSubscribed = localStorage.getItem('isSubscribed') === 'true';
+        let currentUser = JSON.parse(localStorage.getItem('currentUser'));
+
+        // --- INIT & PERMISSIONS ---
+        window.onload = () => {
+            initServiceWorker();
+            checkPermissionsOnLoad();
+            checkLoginState();
+            
+            // Check if opened via notification click
+            const urlParams = new URLSearchParams(window.location.search);
+            if(urlParams.get('read') === 'true') {
+                const quote = urlParams.get('quote');
+                const hindi = urlParams.get('hindi');
+                document.getElementById('reader-content').innerHTML = `"${quote}"<br><br><small>(${hindi})</small>`;
+                document.getElementById('permission-screen').classList.add('hidden');
+                document.getElementById('app-container').classList.remove('hidden');
+                navigate('reader-page');
+            }
+        };
+
+        function checkPermissionsOnLoad() {
+            if (Notification.permission === 'granted') {
+                launchApp();
+            } else if (Notification.permission === 'denied') {
+                document.getElementById('permission-error').classList.remove('hidden');
+            }
+        }
+
+        function requestNotificationPermission() {
+            Notification.requestPermission().then(permission => {
+                if (permission === 'granted') {
+                    launchApp();
+                } else {
+                    // App "closes" by permanently showing the error screen
+                    document.getElementById('permission-error').classList.remove('hidden');
+                    document.querySelector('#permission-screen button').classList.add('hidden');
+                }
+            });
+        }
+
+        function launchApp() {
+            document.getElementById('permission-screen').classList.add('hidden');
+            document.getElementById('app-container').classList.remove('hidden');
+            if(isSubscribed) {
+                document.getElementById('premium-features').classList.remove('hidden');
+            }
+        }
+
+        // --- NAVIGATION ---
+        function navigate(pageId) {
+            document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
+            document.getElementById(pageId).classList.remove('hidden');
+        }
+
+        // --- GOOGLE AUTH & PROFILE LOGIC ---
+        function handleCredentialResponse(response) {
+            // In a real app, verify the JWT token on your backend.
+            // Here, we mock decoding the basic payload to get the name/picture
+            const payload = JSON.parse(atob(response.credential.split('.')[1]));
+            currentUser = {
+                name: payload.name,
+                pic: payload.picture,
+                bio: "Ready to be motivated!"
+            };
+            saveToLocalAndRender();
+        }
+
+        function mockLogin() {
+            currentUser = { name: "Anime Fan", pic: "https://api.dicebear.com/7.x/notionists/svg?seed=AnimeFan", bio: "Let's go!" };
+            saveToLocalAndRender();
+        }
+
+        function checkLoginState() {
+            if (currentUser) {
+                document.getElementById('auth-section').classList.add('hidden');
+                document.getElementById('user-details-section').classList.remove('hidden');
+                document.getElementById('username-input').value = currentUser.name;
+                document.getElementById('bio-input').value = currentUser.bio;
+                document.getElementById('profile-pic-display').src = currentUser.pic;
+                document.getElementById('header-profile-icon').src = currentUser.pic;
+            } else {
+                document.getElementById('auth-section').classList.remove('hidden');
+                document.getElementById('user-details-section').classList.add('hidden');
+                document.getElementById('header-profile-icon').src = "https://api.dicebear.com/7.x/notionists/svg?seed=Guest";
+            }
+        }
+
+        function saveProfile() {
+            currentUser.name = document.getElementById('username-input').value;
+            currentUser.bio = document.getElementById('bio-input').value;
+            saveToLocalAndRender();
+            alert("Profile Saved!");
+        }
+
+        function logout() {
+            currentUser = null;
+            localStorage.removeItem('currentUser');
+            checkLoginState();
+        }
+
+        function saveToLocalAndRender() {
+            localStorage.setItem('currentUser', JSON.stringify(currentUser));
+            checkLoginState();
+        }
+
+        // --- UPI PAYMENT LOGIC ---
+        function payWithUPI(amount) {
+            // Replace with your actual merchant UPI ID
+            const upiId = "8874249334@ybl"; 
+            const name = "MotivAnime";
+            const upiUrl = `upi://pay?pa=${upiId}&pn=${name}&am=${amount}&cu=INR`;
+            
+            // Attempt to open UPI app
+            window.location.href = upiUrl;
+
+            // Mocking payment success for demonstration purposes
+            setTimeout(() => {
+                let confirmed = confirm("Did the payment succeed? (Mock Payment Check)");
+                if(confirmed) {
+                    isSubscribed = true;
+                    localStorage.setItem('isSubscribed', 'true');
+                    alert("Payment Successful! Premium features unlocked.");
+                    document.getElementById('premium-features').classList.remove('hidden');
+                    navigate('main-page');
+                }
+            }, 3000);
+        }
+
+        // --- NOTIFICATIONS & SERVICE WORKER ---
+        function initServiceWorker() {
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('sw.js')
+                .then(reg => console.log('Service Worker Registered!', reg))
+                .catch(err => console.error('Service Worker Registration Failed!', err));
+            }
+        }
+
+        function sendTestNotification() {
+            if (Notification.permission === 'granted') {
+                navigator.serviceWorker.ready.then(function(registration) {
+                    registration.showNotification("Time to rise! 🌅", {
+                        body: "You don't have to see the whole staircase, just take the first step.\n(आपको पूरी सीढ़ी देखने की ज़रूरत नहीं है, बस पहला कदम उठाएं।)",
+                        icon: "https://api.dicebear.com/7.x/notionists/svg?seed=Star",
+                        vibrate: [200, 100, 200],
+                        data: {
+                            quote: "You don't have to see the whole staircase, just take the first step.",
+                            hindi: "आपको पूरी सीढ़ी देखने की ज़रूरत नहीं है, बस पहला कदम उठाएं।"
+                        }
+                    });
+                });
+            }
+        }
+    </script>
+</body>
+</html>
