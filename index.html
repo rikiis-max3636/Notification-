@@ -214,19 +214,36 @@
 
     </div>
 
-    <!-- APP LOGIC -->
-    <script>
-        // --- STATE MANAGEMENT ---
-        let isSubscribed = localStorage.getItem('isSubscribed') === 'true';
-        let currentUser = JSON.parse(localStorage.getItem('currentUser'));
+    <!-- APP LOGIC & FIREBASE INTEGRATION -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js";
+        import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-firestore.js";
+        import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-messaging.js";
 
-        // --- INIT & PERMISSIONS ---
+        // Firebase Configuration filled with your details
+        const firebaseConfig = {
+            apiKey: "AIzaSyCqx_iFuxomLt0VD6tcS_PiAzZcI2ks_0U",
+            authDomain: "anime-4c5ea.firebaseapp.com",
+            projectId: "anime-4c5ea",
+            storageBucket: "anime-4c5ea.firebasestorage.app",
+            messagingSenderId: "10763672147861076367214786",
+            appId: "1:1076367214786:web:2c7d7e0e64b4bf1fed935b"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const messaging = getMessaging(app);
+
+        // State Management
+        window.isSubscribed = localStorage.getItem('isSubscribed') === 'true';
+        window.currentUser = JSON.parse(localStorage.getItem('currentUser'));
+
+        // Init and Permissions Checks
         window.onload = () => {
             initServiceWorker();
             checkPermissionsOnLoad();
             checkLoginState();
             
-            // Check if opened via notification click
             const urlParams = new URLSearchParams(window.location.search);
             if(urlParams.get('read') === 'true') {
                 const quote = urlParams.get('quote');
@@ -238,7 +255,7 @@
             }
         };
 
-        function checkPermissionsOnLoad() {
+        window.checkPermissionsOnLoad = function() {
             if (Notification.permission === 'granted') {
                 launchApp();
             } else if (Notification.permission === 'denied') {
@@ -246,12 +263,11 @@
             }
         }
 
-        function requestNotificationPermission() {
+        window.requestNotificationPermission = function() {
             Notification.requestPermission().then(permission => {
                 if (permission === 'granted') {
                     launchApp();
                 } else {
-                    // App "closes" by permanently showing the error screen
                     document.getElementById('permission-error').classList.remove('hidden');
                     document.querySelector('#permission-screen button').classList.add('hidden');
                 }
@@ -261,43 +277,87 @@
         function launchApp() {
             document.getElementById('permission-screen').classList.add('hidden');
             document.getElementById('app-container').classList.remove('hidden');
-            if(isSubscribed) {
+            if(window.isSubscribed) {
                 document.getElementById('premium-features').classList.remove('hidden');
+            }
+            // If user logged in, make sure token is in Firebase
+            if(window.currentUser && window.currentUser.uid) {
+                window.saveMobileUserToken(window.currentUser.uid);
             }
         }
 
-        // --- NAVIGATION ---
-        function navigate(pageId) {
+        // Navigation Function
+        window.navigate = function(pageId) {
             document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
             document.getElementById(pageId).classList.remove('hidden');
         }
 
-        // --- GOOGLE AUTH & PROFILE LOGIC ---
-        function handleCredentialResponse(response) {
-            // In a real app, verify the JWT token on your backend.
-            // Here, we mock decoding the basic payload to get the name/picture
+        // Save Token to Firebase
+        window.saveMobileUserToken = function(userId) {
+            if (Notification.permission === 'granted') {
+                navigator.serviceWorker.ready.then((registration) => {
+                    getToken(messaging, { 
+                        vapidKey: 'BKccmUiWz0MMd8HShkFVsLblUyEurevqOuISt_IopbqJSmV_dywbktbjuH1nJbuZV_fxP0tHxpQjk1VUIDPoCvE', 
+                        serviceWorkerRegistration: registration 
+                    }).then((currentToken) => {
+                        if (currentToken) {
+                            setDoc(doc(db, "users", userId), { fcmToken: currentToken }, { merge: true });
+                        }
+                    });
+                });
+            }
+        }
+
+        // Activate Subscription Plan in Firebase
+        window.activateOneWeekSubscription = function(userId) {
+            const today = new Date();
+            const expiryDate = new Date();
+            expiryDate.setDate(today.getDate() + 7); 
+
+            setDoc(doc(db, "users", userId), {
+                uid: userId,
+                subscribed: true,
+                subscriptionExpiresAt: expiryDate
+            }, { merge: true }).then(() => {
+                alert("Success! 1 Week plan active. Subah 4:00 baje notification milna shuru ho jayega.");
+                window.isSubscribed = true;
+                localStorage.setItem('isSubscribed', 'true');
+                document.getElementById('premium-features').classList.remove('hidden');
+                window.navigate('main-page');
+            });
+        }
+
+        // Auth & Profile Logic
+        window.handleCredentialResponse = function(response) {
             const payload = JSON.parse(atob(response.credential.split('.')[1]));
-            currentUser = {
+            window.currentUser = {
+                uid: payload.sub, // unique google user id
                 name: payload.name,
                 pic: payload.picture,
                 bio: "Ready to be motivated!"
             };
             saveToLocalAndRender();
-        }
+        };
 
-        function mockLogin() {
-            currentUser = { name: "Anime Fan", pic: "https://api.dicebear.com/7.x/notionists/svg?seed=AnimeFan", bio: "Let's go!" };
+        window.mockLogin = function() {
+            window.currentUser = { 
+                uid: "mock_user_123", 
+                name: "Anime Fan", 
+                pic: "https://api.dicebear.com/7.x/notionists/svg?seed=AnimeFan", 
+                bio: "Let's go!" 
+            };
             saveToLocalAndRender();
         }
 
-        function checkLoginState() {
-            if (currentUser) {
+        window.checkLoginState = function() {
+            if (window.currentUser) {
                 document.getElementById('auth-section').classList.add('hidden');
                 document.getElementById('user-details-section').classList.remove('hidden');
-                document.getElementById('username-input').value = currentUser.name;
-                document.getElementById('bio-input').value = currentUser.bio;
-                document.getElementById('profile-pic-display').src = currentUser.pic;
-                document.getElementById('header-profile-icon').src = currentUser.pic;
+                document.getElementById('username-input').value = window.currentUser.name;
+                document.getElementById('bio-input').value = window.currentUser.bio;
+                document.getElementById('profile-pic-display').src = window.currentUser.pic;
+                document.getElementById('header-profile-icon').src = window.currentUser.pic;
+                window.saveMobileUserToken(window.currentUser.uid);
             } else {
                 document.getElementById('auth-section').classList.remove('hidden');
                 document.getElementById('user-details-section').classList.add('hidden');
@@ -305,48 +365,47 @@
             }
         }
 
-        function saveProfile() {
-            currentUser.name = document.getElementById('username-input').value;
-            currentUser.bio = document.getElementById('bio-input').value;
+        window.saveProfile = function() {
+            if(!window.currentUser) return;
+            window.currentUser.name = document.getElementById('username-input').value;
+            window.currentUser.bio = document.getElementById('bio-input').value;
             saveToLocalAndRender();
             alert("Profile Saved!");
         }
 
-        function logout() {
-            currentUser = null;
+        window.logout = function() {
+            window.currentUser = null;
             localStorage.removeItem('currentUser');
-            checkLoginState();
+            window.checkLoginState();
         }
 
         function saveToLocalAndRender() {
-            localStorage.setItem('currentUser', JSON.stringify(currentUser));
-            checkLoginState();
+            localStorage.setItem('currentUser', JSON.stringify(window.currentUser));
+            window.checkLoginState();
         }
 
-        // --- UPI PAYMENT LOGIC ---
-        function payWithUPI(amount) {
-            // Replace with your actual merchant UPI ID
-            const upiId = "8874249334@ybl"; 
+        // UPI Payment Link
+        window.payWithUPI = function(amount) {
+            const upiId = "yourmerchant@ybl"; // Apni UPI id yahan dalein
             const name = "MotivAnime";
             const upiUrl = `upi://pay?pa=${upiId}&pn=${name}&am=${amount}&cu=INR`;
             
-            // Attempt to open UPI app
             window.location.href = upiUrl;
 
-            // Mocking payment success for demonstration purposes
             setTimeout(() => {
                 let confirmed = confirm("Did the payment succeed? (Mock Payment Check)");
                 if(confirmed) {
-                    isSubscribed = true;
-                    localStorage.setItem('isSubscribed', 'true');
-                    alert("Payment Successful! Premium features unlocked.");
-                    document.getElementById('premium-features').classList.remove('hidden');
-                    navigate('main-page');
+                    if(window.currentUser) {
+                        window.activateOneWeekSubscription(window.currentUser.uid);
+                    } else {
+                        alert("Please login/create a profile first before subscribing!");
+                        window.navigate('profile-page');
+                    }
                 }
             }, 3000);
         }
 
-        // --- NOTIFICATIONS & SERVICE WORKER ---
+        // Service Worker Management
         function initServiceWorker() {
             if ('serviceWorker' in navigator) {
                 navigator.serviceWorker.register('sw.js')
@@ -355,7 +414,7 @@
             }
         }
 
-        function sendTestNotification() {
+        window.sendTestNotification = function() {
             if (Notification.permission === 'granted') {
                 navigator.serviceWorker.ready.then(function(registration) {
                     registration.showNotification("Time to rise! 🌅", {
